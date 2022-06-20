@@ -1,66 +1,80 @@
 using UnityEngine;
 using Modding;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace HKDamageLimitMod
 {
 	// Define a new mod named `CustomSaveData` that implements `GlobalSettings`
 	// to signify that it will save some data to the saves folder.
-	public class HKDamageLimit : Mod, IGlobalSettings<CustomGlobalSaveData>, ILocalSettings<CustomLocalSaveData>
+	public class HKDamageLimit : Mod,
+		ILocalSettings<DamageSettingData>,
+		ITogglableMod,
+		IMenuMod
 	{
 		public static HKDamageLimit LoadedInstance { get; set; }
 
-		// The global settings for this mod. The settings load will only occur once.
-		// so a static field should be used to prevent loss of data.
-		// If this mod has not been loaded yet, `OnLoadGlobal` will never be called,
-		// so a default value must be provided.
-		public static CustomGlobalSaveData GlobalSaveData { get; set; } = new CustomGlobalSaveData();
-		// Implement the GlobalSettings interface.
-		// This method gets called when the mod loader loads the global settings.
-		public void OnLoadGlobal(CustomGlobalSaveData s) => HKDamageLimit.GlobalSaveData = s;
-		// This method gets called when the mod loader needs to save the global settings.
-		public CustomGlobalSaveData OnSaveGlobal() => HKDamageLimit.GlobalSaveData;
+		public DamageSettingData LocalSaveData { get; set; } = new();
 
-		// The save data specific to a certain savefile. This setting will be loaded each time a save is opened.
-		// If this mod has not been loaded yet on a save, `OnLoadLocal` will never be called,
-		// so a default value must be provided.
-		public CustomLocalSaveData LocalSaveData { get; set; } = new CustomLocalSaveData();
-		// Implement the LocalSettings interface.
-		// This method gets called when a save is loaded.
-		public void OnLoadLocal(CustomLocalSaveData s) => this.LocalSaveData = s;
-		// This method gets called when the player saves their file.
-		public CustomLocalSaveData OnSaveLocal() => this.LocalSaveData;
+		public bool ToggleButtonInsideMenu => true;
 
-		public override string GetVersion() => Assembly.GetExecutingAssembly().GetName().Version.ToString();
+		public void OnLoadLocal(DamageSettingData s) => this.LocalSaveData = s;
 
-		// The global settings are loaded before this method is called.
+		public DamageSettingData OnSaveLocal() => this.LocalSaveData;
+
+		public override string GetVersion() => Assembly.GetExecutingAssembly()
+			.GetName().Version.ToString();
+
 		public override void Initialize()
 		{
-			if (HKDamageLimit.LoadedInstance != null) return;
-			HKDamageLimit.LoadedInstance = this;
-			// Hook into the savegame load hook (which will occur after OnLoadLocal is called).
-			ModHooks.SavegameLoadHook += slot =>
+			if (HKDamageLimit.LoadedInstance != null)
 			{
-				this.LocalSaveData.Loaded += 1;
-				HKDamageLimit.GlobalSaveData.SavesLoaded += 1;
-				this.Log($"Save {slot} has been loaded {this.LocalSaveData.Loaded} times!");
-				this.Log($"Saves have been loaded a total of {HKDamageLimit.GlobalSaveData.SavesLoaded} times!");
+				return;
+			}
+
+			HKDamageLimit.LoadedInstance = this;
+
+			ModHooks.TakeHealthHook += DamageModifier;
+		}
+
+		public void Unload()
+		{
+			ModHooks.TakeHealthHook -= DamageModifier;
+
+			HKDamageLimit.LoadedInstance = null;
+		}
+
+		public List<IMenuMod.MenuEntry> GetMenuData(
+			IMenuMod.MenuEntry? toggleButtonEntry)
+		{
+			var entry = new IMenuMod.MenuEntry(
+				"All damage set to:",
+				new string[] { "0", "1" },
+				"Sets all damage received to a given number",
+				MenuSaver,
+				MenuLoader
+			);
+
+			return new List<IMenuMod.MenuEntry>()
+			{
+				entry,
+				toggleButtonEntry.Value
 			};
 		}
-	}
 
-	// These do not have to be classes, the mod loader can serialize and deserialize value types as well.
-	// The global data to store that is transient between saves.
-	public class CustomGlobalSaveData
-	{
-		// The number of times the player has loaded into a save.
-		public int SavesLoaded;
-	}
+		public void MenuSaver(int value)
+		{
+			this.LocalSaveData.DamageSetting = value;
+		}
 
-	// The local data to store that is specific to saves.
-	public class CustomLocalSaveData
-	{
-		// The number of times the player has loaded into this save.
-		public int Loaded;
+		public int MenuLoader()
+		{
+			return this.LocalSaveData.DamageSetting;
+		}
+
+		public int DamageModifier(int orig)
+		{
+			return this.LocalSaveData.DamageSetting;
+		}
 	}
 }
