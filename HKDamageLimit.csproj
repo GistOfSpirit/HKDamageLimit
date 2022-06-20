@@ -1,0 +1,18 @@
+<Project
+	 Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net472</TargetFramework>
+		<AssemblyTitle>HKDamageLimit</AssemblyTitle>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<DebugType>portable</DebugType>
+		<OutputPath>bin\$(Configuration)\</OutputPath>
+		<LangVersion>latest</LangVersion>
+		<HollowKnightRefs>./HollowKnightManaged/</HollowKnightRefs>
+	</PropertyGroup>
+	<ItemGroup>
+		<Reference
+			 Include="Assembly-CSharp">
+			<HintPath>$(HollowKnightRefs)/Assembly-CSharp.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+</Project>
