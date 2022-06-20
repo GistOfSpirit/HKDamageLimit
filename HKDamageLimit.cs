@@ -5,8 +5,6 @@ using System.Collections.Generic;
 
 namespace HKDamageLimitMod
 {
-	// Define a new mod named `CustomSaveData` that implements `GlobalSettings`
-	// to signify that it will save some data to the saves folder.
 	public class HKDamageLimit : Mod,
 		ILocalSettings<DamageSettingData>,
 		ITogglableMod,
